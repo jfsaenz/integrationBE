@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CURRENT_USER } from "@/lib/mock-data";
+import { toast } from "sonner";
+import { uploadFiles } from "@/lib/uploadthing";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -10,40 +12,70 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState(CURRENT_USER.bio);
   const [website, setWebsite] = useState(CURRENT_USER.website ?? "");
   const [avatarPreview, setAvatarPreview] = useState(CURRENT_USER.avatar);
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setAvatarPreview(URL.createObjectURL(file));
 
-    // TODO: Upload the avatar with UploadThing and save the returned URL.
-    // Example:
-    //   const [result] = await uploadFiles("imageUploader", { files: [file] });
-    //   setUploadedAvatarUrl(result.url);
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploadingAvatar(true);
+
+    try {
+      const results = await uploadFiles("imageUploader", {
+        files: [file],
+      });
+
+      const uploadedUrl = results?.[0]?.ufsUrl ?? results?.[0]?.url;
+
+      if (!uploadedUrl) {
+        throw new Error("No se obtuvo URL del archivo subido");
+      }
+
+      setUploadedAvatarUrl(uploadedUrl);
+      toast.success("Avatar subido con éxito");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al subir el avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+
+    
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    // TODO: Replace the URL below with your real backend endpoint.
-    // Also pass `avatarUrl` from UploadThing once you integrate file uploads.
-    // Example: fetch("https://your-api.com/profile", { method: "POST", ... })
-    await fetch("/api/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, bio, website }),
-    });
+    try {
+      const payload = {
+        name,
+        bio,
+        website,
+        avatarUrl: uploadedAvatarUrl ?? avatarPreview,
+      };
 
-    setSaved(true);
-    setLoading(false);
-    setTimeout(() => {
-      router.push(`/profile/${CURRENT_USER.username}`);
-      router.refresh();
-    }, 800);
+      console.log("Profile payload:", payload);
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      setSaved(true);
+      toast.success("Usuario actualizado con éxito");
+
+      setTimeout(() => {
+        router.push(`/profile/${CURRENT_USER.username}`);
+        router.refresh();
+      }, 800);
+    } catch {
+      toast.error("Error al actualizar el perfil");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -59,14 +91,26 @@ export default function EditProfilePage() {
             alt="Avatar preview"
             className="w-16 h-16 rounded-full object-cover border border-gray-200"
           />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="text-sm font-semibold text-blue-500 hover:text-blue-700"
-          >
-            Change photo
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="text-sm font-semibold text-blue-500 hover:text-blue-700"
+              disabled={uploadingAvatar}
+            >
+              {uploadingAvatar ? "Uploading..." : "Change photo"}
+            </button>
+            {uploadedAvatarUrl && (
+              <span className="text-xs text-green-600">Imagen subida</span>
+            )}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
         </div>
 
         {/* Name */}
@@ -91,7 +135,9 @@ export default function EditProfilePage() {
             maxLength={150}
             className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm resize-none outline-none focus:border-gray-500 transition-colors"
           />
-          <p className="text-xs text-gray-400 mt-1 text-right">{bio.length}/150</p>
+          <p className="text-xs text-gray-400 mt-1 text-right">
+            {bio.length}/150
+          </p>
         </div>
 
         {/* Website */}
@@ -108,10 +154,16 @@ export default function EditProfilePage() {
 
         <button
           type="submit"
-          disabled={loading || saved}
+          disabled={loading || saved || uploadingAvatar}
           className="w-full py-3 rounded-xl bg-blue-500 text-white font-semibold text-sm hover:bg-blue-600 transition-colors disabled:opacity-40"
         >
-          {saved ? "Saved ✓" : loading ? "Saving…" : "Save changes"}
+          {uploadingAvatar
+            ? "Uploading avatar..."
+            : saved
+            ? "Saved ✓"
+            : loading
+            ? "Saving…"
+            : "Save changes"}
         </button>
       </form>
     </div>

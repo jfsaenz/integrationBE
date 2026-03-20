@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type Tab = "post" | "reel";
 
@@ -19,49 +20,38 @@ export default function CreatePage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Show a local preview so the user can see what they picked
+
     setPreview(URL.createObjectURL(file));
 
-    // TODO: Upload the file to UploadThing here and save the returned URL.
-    // 1. Install: npm install uploadthing @uploadthing/react
-    // 2. Create your file router at /src/app/api/uploadthing/core.ts
-    // 3. Upload and save the URL:
-    //      const [result] = await uploadFiles("imageUploader", { files: [file] });
-    //      setUploadedUrl(result.url);
+    // TODO (BONO): Upload the file to UploadThing and save the returned URL.
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!preview) { setError("Please select a file."); return; }
+
+    if (!preview) {
+      setError("Please select a file.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      // Simulación de POST
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       if (tab === "post") {
-        // TODO: Replace `preview` with the real URL returned by UploadThing after upload.
-        // TODO: Change the URL below to your real backend endpoint.
-        // Example: fetch("https://your-api.com/posts", { method: "POST", ... })
-        await fetch("/api/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: preview, caption, location }),
-        });
+        toast.success("Post creado con éxito");
       } else {
-        // TODO: Replace `preview` with the real URL returned by UploadThing after upload.
-        // TODO: Change the URL below to your real backend endpoint.
-        // Example: fetch("https://your-api.com/reels", { method: "POST", ... })
-        await fetch("/api/reels", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoUrl: preview, thumbnailUrl: preview, caption, audioTrack }),
-        });
+        toast.success("Reel creado con éxito");
       }
 
       router.push("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+      toast.error("Error al crear");
     } finally {
       setLoading(false);
     }
@@ -76,9 +66,14 @@ export default function CreatePage() {
         {(["post", "reel"] as Tab[]).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setPreview(null); }}
+            onClick={() => {
+              setTab(t);
+              setPreview(null);
+            }}
             className={`flex-1 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
-              tab === t ? "bg-white shadow-sm" : "text-gray-500 hover:text-gray-700"
+              tab === t
+                ? "bg-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             {t}
@@ -94,24 +89,47 @@ export default function CreatePage() {
         >
           {preview ? (
             tab === "post" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="preview" className="w-full h-full object-cover" />
+              <img
+                src={preview}
+                alt="preview"
+                className="w-full h-full object-cover"
+              />
             ) : (
-              <video src={preview} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+              <video
+                src={preview}
+                className="w-full h-full object-cover"
+                muted
+                loop
+                autoPlay
+                playsInline
+              />
             )
           ) : (
             <div className="flex flex-col items-center gap-3 text-gray-400 p-8 text-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="w-12 h-12"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                />
               </svg>
-              <p className="font-semibold text-sm">Click to select a file</p>
+              <p className="font-semibold text-sm">
+                Click to select a file
+              </p>
               <p className="text-xs">
                 {tab === "post" ? "JPEG, PNG, WEBP" : "MP4, MOV"}
               </p>
-              {/* TODO: Replace this area with <UploadDropzone> from @uploadthing/react */}
+              {/* TODO (BONO): Replace this area with UploadDropzone */}
             </div>
           )}
         </div>
+
         <input
           ref={fileRef}
           type="file"
@@ -122,7 +140,9 @@ export default function CreatePage() {
 
         {/* Caption */}
         <div>
-          <label className="block text-sm font-medium mb-1.5">Caption</label>
+          <label className="block text-sm font-medium mb-1.5">
+            Caption
+          </label>
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
@@ -135,7 +155,9 @@ export default function CreatePage() {
 
         {tab === "post" && (
           <div>
-            <label className="block text-sm font-medium mb-1.5">Location (optional)</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Location (optional)
+            </label>
             <input
               type="text"
               value={location}
@@ -148,7 +170,9 @@ export default function CreatePage() {
 
         {tab === "reel" && (
           <div>
-            <label className="block text-sm font-medium mb-1.5">Audio track (optional)</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Audio track (optional)
+            </label>
             <input
               type="text"
               value={audioTrack}
@@ -159,7 +183,9 @@ export default function CreatePage() {
           </div>
         )}
 
-        {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-500 font-medium">{error}</p>
+        )}
 
         <button
           type="submit"

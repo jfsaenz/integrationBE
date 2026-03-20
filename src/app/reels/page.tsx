@@ -9,15 +9,41 @@ export default function ReelsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Change the URL below to your real backend endpoint.
-    // Example: fetch("https://your-api.com/reels")
+    async function loadReels() {
+      try {
+        const res = await fetch("/api/reels");
+
+        if (!res.ok) {
+          throw new Error("Error loading reels");
+        }
+
+        const data = await res.json();
+        setReels(Array.isArray(data) ? data : data.reels ?? []);
+      } catch (error) {
+        console.error(error);
+        setReels([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadReels();
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20 text-gray-400">Loading reels…</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20 text-gray-400">
+        Loading reels…
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center py-6 px-4">
-      <h1 className="text-xl font-bold mb-6 self-start lg:self-center">Reels</h1>
+      <h1 className="text-xl font-bold mb-6 self-start lg:self-center">
+        Reels
+      </h1>
+
       <div className="flex flex-col gap-6 items-center w-full">
         {reels.map((reel) => (
           <ReelCard key={reel.id} reel={reel} />

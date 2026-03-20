@@ -13,21 +13,49 @@ export default function MessageThreadPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Change the URLs below to your real backend endpoints.
-    // Example:
-    //   fetch(`https://your-api.com/messages/${id}`)
-    //   fetch("https://your-api.com/messages")
-    Promise.all([
-      fetch(`/api/messages/${id}`).then((res) => res.json()),
-      fetch("/api/messages").then((res) => res.json()),
-    ]).then(([conv, list]) => {
-      setConversation(conv);
-      setConversations(list);
-    }).finally(() => setLoading(false));
+    async function loadData() {
+      setLoading(true);
+
+      try {
+        const [convRes, listRes] = await Promise.all([
+          fetch(`/api/messages/${id}`),
+          fetch("/api/messages"),
+        ]);
+
+        if (!convRes.ok || !listRes.ok) {
+          throw new Error("Error loading messages");
+        }
+
+        const convData = await convRes.json();
+        const listData = await listRes.json();
+
+        setConversation(convData);
+        setConversations(
+          Array.isArray(listData) ? listData : listData.conversations ?? []
+        );
+      } catch (error) {
+        console.error(error);
+        setConversation(null);
+        setConversations([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, [id]);
 
-  if (loading) return <div className="flex justify-center py-20 text-gray-400">Loading…</div>;
-  if (!conversation) return <div className="flex justify-center py-20 text-gray-400">Conversation not found.</div>;
+  if (loading) {
+    return <div className="flex justify-center py-20 text-gray-400">Loading…</div>;
+  }
+
+  if (!conversation) {
+    return (
+      <div className="flex justify-center py-20 text-gray-400">
+        Conversation not found.
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen max-w-4xl mx-auto border-x border-gray-200 bg-white">
